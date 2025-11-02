@@ -21,5 +21,9 @@
   "workbench.fontAliasing": "antialiased",
   "workbench.statusBar.visible": true,
   "notebook.lineNumbers": "on",
-  "workbench.productIconTheme": "bongocat"
+  "workbench.productIconTheme": "bongocat",
+  "nyanMode.nyanRainbowAnimation": true,
+  "nyanMode.nyanDisplayPercent": true,
+  "nyanMode.nyanAnimation": "quiet",
+  "nyanMode.nyanColor": "#3794FF"
 }
