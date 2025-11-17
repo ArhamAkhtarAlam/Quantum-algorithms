@@ -26,6 +26,6 @@
   "nyanMode.nyanDisplayPercent": true,
   "nyanMode.nyanAnimation": "quiet",
   "nyanMode.nyanColor": "#AAD94C",
-  "nyanMode.nyanLength": 70 ,
+  "nyanMode.nyanLength": 65 ,
   "nyanMode.nyanDiagnostics": false
 }
