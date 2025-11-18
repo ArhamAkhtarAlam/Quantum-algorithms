@@ -1,7 +1,7 @@
-// ...existing code...
 {
   "name": "Dev Container",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+
   "customizations": {
     "vscode": {
       "extensions": [
@@ -34,6 +34,6 @@
       ]
     }
   },
-  "postCreateCommand": "echo 'Devcontainer ready'"
+
+  "postCreateCommand": "pip install -r requirements.txt || echo 'No requirements.txt, skipping install'; echo 'Devcontainer ready'"
 }
-// ...existing code...
