@@ -15,7 +15,7 @@ from rich.text import Text
 # 1 → detailed (PROGRESS BAR + DUMP TO FILE)
 # 2 → fast
 # ==================================================
-detailed = 3
+detailed = 0
 # ==================================================
 
 # HARD LIMITS
