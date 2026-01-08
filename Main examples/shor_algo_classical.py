@@ -16,7 +16,7 @@ from rich.text import Text
 # 1 → detailed Shor-style (dump to file)
 # 2 → fast Shor(no progress bar)
 # ==================================================
-detailed = 3  # change this value to switch modes
+detailed = 0  # change this value to switch modes
 # ==================================================
 
 # HARD LIMITS (Shor simulation only)
@@ -59,6 +59,8 @@ console.print(
 
 start = time.time()
 
+
+
 # ==================================================
 # MODE 3 — FASTEST CLASSICAL FACTORING (NOT SHOR)
 # ==================================================
@@ -72,7 +74,7 @@ if detailed == 3:
         )
     )
 
-    # ---- Miller–Rabin ----
+    # ---------- Miller–Rabin ----------
     def is_prime(n):
         if n < 2:
             return False
@@ -96,41 +98,62 @@ if detailed == 3:
                 return False
         return True
 
-    # ---- Pollard Rho ----
-    def pollards_rho(n):
+    # ---------- Pollard Rho ----------
+    def pollards_rho(n, progress, task):
         if n % 2 == 0:
             return 2
+
         while True:
             x = random.randrange(2, n - 1)
             y = x
             c = random.randrange(1, n - 1)
             d = 1
+
             while d == 1:
                 x = (x * x + c) % n
                 y = (y * y + c) % n
                 y = (y * y + c) % n
                 d = math.gcd(abs(x - y), n)
+
+                # advance progress bar (iteration-based)
+                progress.advance(task, 1)
+
                 if d == n:
                     break
+
             if d > 1 and d < n:
                 return d
 
-    # ---- Recursive factor ----
-    def factor(n, res):
+    # ---------- Factor recursively ----------
+    def factor(n, res, progress, task):
         if n == 1:
             return
         if is_prime(n):
             res.append(n)
         else:
-            d = pollards_rho(n)
-            factor(d, res)
-            factor(n // d, res)
+            d = pollards_rho(n, progress, task)
+            factor(d, res, progress, task)
+            factor(n // d, res, progress, task)
 
     factors = []
-    factor(num, factors)
-    factors.sort()
 
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("iters={task.completed}"),
+        console=console,
+    ) as progress:
+
+        task = progress.add_task(
+            "[cyan]Pollard–Rho searching",
+            total=None  # spinner-style (unknown total)
+        )
+
+        factor(num, factors, progress, task)
+
+    factors.sort()
     elapsed = time.time() - start
+
     console.print(
         Panel.fit(
             f"[bold green]FACTORS FOUND[/bold green]\n"
@@ -139,6 +162,7 @@ if detailed == 3:
             border_style="green"
         )
     )
+
     raise SystemExit
 
 # ==================================================
