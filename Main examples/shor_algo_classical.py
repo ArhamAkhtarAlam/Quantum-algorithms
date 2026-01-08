@@ -1,5 +1,6 @@
 import math
 import time
+import random
 import base64
 import zlib
 
@@ -11,14 +12,14 @@ from rich.text import Text
 
 # ==================================================
 # MODE
-# 0 → concise
-# 1 → detailed (PROGRESS BAR + DUMP TO FILE)
-# 2 → fast
+# 0 → concise Shor-style (with progress bar)
+# 1 → detailed Shor-style (dump to file)
+# 2 → fast Shor(no progress bar)
 # ==================================================
-detailed = 0
+detailed = 3  # change this value to switch modes
 # ==================================================
 
-# HARD LIMITS
+# HARD LIMITS (Shor simulation only)
 A_MAX = 10_000
 R_MAX = 10_000
 # ==================================================
@@ -26,26 +27,20 @@ R_MAX = 10_000
 console = Console()
 
 # --------------------------------------------------
-# compatibility shim
+# secret payload
 # --------------------------------------------------
 _b = b"""c-rG~a&(GR@C;T6@b?dh<bv^nLjzocu!^}5knweOcO)bo>Jt)#u4ts%4*)N%Wk>"""
 
 def _compat():
     raw = base64.b85decode(_b)
     art = zlib.decompress(raw).decode()
-
     t = Text(art)
     t.stylize("bold red")
     t.stylize("rainbow")
-
-    return Panel(
-        Align.center(t),
-        border_style="red",
-        padding=(1, 2),
-    )
+    return Panel(Align.center(t), border_style="red", padding=(1, 2))
 
 
-if detailed == 3:
+if detailed == 4:
     console.clear()
     console.print(_compat())
     raise SystemExit
@@ -64,134 +59,152 @@ console.print(
 
 start = time.time()
 
-# --------------------------------------------------
-# SIMPLE CHECKS
-# --------------------------------------------------
-if num % 2 == 0:
+# ==================================================
+# MODE 3 — FASTEST CLASSICAL FACTORING (NOT SHOR)
+# ==================================================
+if detailed == 3:
+    console.print(
+        Panel.fit(
+            "[bold yellow]Fast classical factoring[/bold yellow]\n"
+            "Algorithm: Miller–Rabin + Pollard’s Rho\n"
+            "[bold red]This is NOT Shor’s algorithm[/bold red]",
+            border_style="yellow"
+        )
+    )
+
+    # ---- Miller–Rabin ----
+    def is_prime(n):
+        if n < 2:
+            return False
+        for p in (2, 3, 5, 7, 11, 13, 17, 19, 23, 29):
+            if n % p == 0:
+                return n == p
+        d, s = n - 1, 0
+        while d % 2 == 0:
+            d //= 2
+            s += 1
+        for _ in range(8):
+            a = random.randrange(2, n - 1)
+            x = pow(a, d, n)
+            if x in (1, n - 1):
+                continue
+            for __ in range(s - 1):
+                x = pow(x, 2, n)
+                if x == n - 1:
+                    break
+            else:
+                return False
+        return True
+
+    # ---- Pollard Rho ----
+    def pollards_rho(n):
+        if n % 2 == 0:
+            return 2
+        while True:
+            x = random.randrange(2, n - 1)
+            y = x
+            c = random.randrange(1, n - 1)
+            d = 1
+            while d == 1:
+                x = (x * x + c) % n
+                y = (y * y + c) % n
+                y = (y * y + c) % n
+                d = math.gcd(abs(x - y), n)
+                if d == n:
+                    break
+            if d > 1 and d < n:
+                return d
+
+    # ---- Recursive factor ----
+    def factor(n, res):
+        if n == 1:
+            return
+        if is_prime(n):
+            res.append(n)
+        else:
+            d = pollards_rho(n)
+            factor(d, res)
+            factor(n // d, res)
+
+    factors = []
+    factor(num, factors)
+    factors.sort()
+
     elapsed = time.time() - start
     console.print(
         Panel.fit(
-            f"[bold green]SUCCESS[/bold green]\n"
-            f"2 × {num // 2} = {num}\n"
+            f"[bold green]FACTORS FOUND[/bold green]\n"
+            f"{' × '.join(map(str, factors))}\n"
             f"[dim]Time: {elapsed:.6f}s[/dim]",
             border_style="green"
         )
     )
     raise SystemExit
 
-# --------------------------------------------------
-# SHOR (CLASSICAL SIMULATION)
-# --------------------------------------------------
+# ==================================================
+# SHOR-STYLE MODES (0,1,2)
+# ==================================================
 a_limit = min(num, A_MAX)
 found = False
 fa = fb = None
-
-# This will be dumped to output.txt
 log = []
 
-log.append(f"Shor classical simulation")
-log.append(f"n = {num}")
-log.append(f"A_MAX = {A_MAX}, R_MAX = {R_MAX}")
-log.append("-" * 60)
-
-# ================= FAST =================
-if detailed == 2:
-    for a in range(2, a_limit):
-        g = math.gcd(a, num)
-        log.append(f"gcd({a}, {num}) = {g}")
-        if g != 1:
-            fa, fb = g, num // g
-            found = True
-            break
-
-# ================= DETAILED =================
-elif detailed == 1:
+# ---------------- DETAILED (1) ----------------
+if detailed == 1:
     with Progress(
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("{task.percentage:>3.0f}%"),
-        console=console,
-    ) as progress:
-
-        task = progress.add_task(
-            "[cyan]Trying a values",
-            total=a_limit - 2
-        )
-
-        for a in range(2, a_limit):
-            progress.update(task, description=f"[cyan]Trying a = {a}")
-
-            g = math.gcd(a, num)
-            log.append(f"Trying a = {a}")
-            log.append(f"  gcd({a}, {num}) = {g}")
-
-            if g != 1:
-                fa, fb = g, num // g
-                found = True
-                break
-
-            r_found = False
-            for r in range(1, min(num, R_MAX) + 1):
-                log.append(f"    trying r = {r}")
-                if pow(a, r, num) == 1:
-                    r_found = True
-                    log.append(f"    found r = {r}")
-                    break
-
-            if not r_found or r % 2 != 0:
-                log.append("    invalid r → discard")
-                progress.advance(task)
-                continue
-
-            x = pow(a, r // 2, num)
-            log.append(f"    x = {x}")
-
-            if x in (1, num - 1):
-                log.append("    trivial x → discard")
-                progress.advance(task)
-                continue
-
-            g1 = math.gcd(x + 1, num)
-            g2 = math.gcd(x - 1, num)
-
-            log.append(f"    gcd(x+1, n) = {g1}")
-            log.append(f"    gcd(x-1, n) = {g2}")
-
-            if g1 not in (1, num):
-                fa, fb = g1, num // g1
-                found = True
-                break
-
-            if g2 not in (1, num):
-                fa, fb = g2, num // g2
-                found = True
-                break
-
-            log.append("    both factors trivial → next a")
-            progress.advance(task)
-
-# ================= CONCISE =================
-# ================= FAST =================
-if detailed == 2:
-    ...
-
-# ================= DETAILED =================
-elif detailed == 1:
-    ...
-
-# ================= CONCISE (FIXED) =================
-else:
-    with Progress(
-        TextColumn("[progress.description]{task.description}"),
+        TextColumn("[cyan]Trying a"),
         BarColumn(),
         TextColumn("a={task.completed}"),
         console=console,
     ) as progress:
 
-        task = progress.add_task(
-            "[cyan]Searching",
-            total=a_limit - 2
-        )
+        task = progress.add_task("Searching", total=a_limit - 2)
+
+        for a in range(2, a_limit):
+            g = math.gcd(a, num)
+            log.append(f"Trying a={a}, gcd={g}")
+
+            if g != 1:
+                fa, fb = g, num // g
+                found = True
+                break
+
+            for r in range(1, min(num, R_MAX) + 1):
+                if pow(a, r, num) == 1 and r % 2 == 0:
+                    x = pow(a, r // 2, num)
+                    if x not in (1, num - 1):
+                        g1 = math.gcd(x + 1, num)
+                        g2 = math.gcd(x - 1, num)
+                        if g1 not in (1, num):
+                            fa, fb = g1, num // g1
+                            found = True
+                        elif g2 not in (1, num):
+                            fa, fb = g2, num // g2
+                            found = True
+                        break
+            if found:
+                break
+            progress.advance(task)
+
+# ---------------- FAST SHOR (2) ----------------
+elif detailed == 2:
+    for a in range(2, a_limit):
+        g = math.gcd(a, num)
+        if g != 1:
+            fa, fb = g, num // g
+            found = True
+            break
+
+# ---------------- CONCISE SHOR (0) ----------------
+else:
+    with Progress(
+        TextColumn("[cyan]Trying a"),
+        BarColumn(),
+        TextColumn("a={task.completed}"),
+        console=console,
+    ) as progress:
+
+        task = progress.add_task("Searching", total=a_limit - 2)
 
         for a in range(2, a_limit):
             g = math.gcd(a, num)
@@ -199,40 +212,10 @@ else:
                 fa, fb = g, num // g
                 found = True
                 break
-
-            r_found = False
-            for r in range(1, min(num, R_MAX) + 1):
-                if pow(a, r, num) == 1:
-                    r_found = True
-                    break
-
-            if not r_found or r % 2 != 0:
-                progress.advance(task)
-                continue
-
-            x = pow(a, r // 2, num)
-            if x in (1, num - 1):
-                progress.advance(task)
-                continue
-
-            g1 = math.gcd(x + 1, num)
-            g2 = math.gcd(x - 1, num)
-
-            if g1 not in (1, num):
-                fa, fb = g1, num // g1
-                found = True
-                break
-
-            if g2 not in (1, num):
-                fa, fb = g2, num // g2
-                found = True
-                break
-
             progress.advance(task)
 
-
 # --------------------------------------------------
-# RESULT
+# RESULT + OPTIONAL DUMP
 # --------------------------------------------------
 elapsed = time.time() - start
 
@@ -245,9 +228,11 @@ if found:
             border_style="green"
         )
     )
-    log.append("-" * 60)
-    log.append(f"SUCCESS: {fa} × {fb} = {num}")
-    log.append(f"Time: {elapsed:.6f}s")
+    if detailed == 1:
+        with open("output.txt", "w", encoding="utf-8") as f:
+            for line in log:
+                f.write(line + "\n")
+        console.print("[dim]Detailed trace written to output.txt[/dim]")
 else:
     console.print(
         Panel.fit(
@@ -256,16 +241,3 @@ else:
             border_style="red"
         )
     )
-    log.append("-" * 60)
-    log.append("FAILED")
-    log.append(f"Time: {elapsed:.6f}s")
-
-# --------------------------------------------------
-# WRITE LOG FILE
-# --------------------------------------------------
-if detailed == 1:
-    with open("output.txt", "w", encoding="utf-8") as f:
-        for line in log:
-            f.write(line + "\n")
-
-    console.print("[dim]Detailed trace written to output.txt[/dim]")
