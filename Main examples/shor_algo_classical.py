@@ -35,8 +35,7 @@ def _compat():
     raw = base64.b85decode(_b)
     art = zlib.decompress(raw).decode()
     t = Text(art)
-    t.stylize("bold red")
-    t.stylize("rainbow")
+    t.stylize("bold cyan")
     return Panel(Align.center(t), border_style="red", padding=(1, 2))
 
 
